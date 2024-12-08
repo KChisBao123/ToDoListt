@@ -23,7 +23,6 @@ def addTask():
 
 
 def deleteTask():
-    """Xóa task được chọn khỏi danh sách và file."""
     global task_list
     task = str(listbox.get(ANCHOR))
     if task in task_list:
@@ -35,7 +34,6 @@ def deleteTask():
 
 
 def openTaskfile():
-    """Mở file tasklist.txt và tải danh sách task."""
     try:
         global task_list
         with open("tasklist.txt", "r") as taskfile:
@@ -69,7 +67,7 @@ Label(window, image=noteImage, bg="#32405b").place(x=30, y=25)
 heading = Label(window, text="All Task", font="arial 20 bold", fg="white", bg="#32405b")
 heading.place(x=130, y=20)
 
-# Main frame
+
 frame = Frame(window, width=400, height=50, bg="white")
 frame.place(x=0, y=70)
 
@@ -102,10 +100,8 @@ scrollbar.pack(side=RIGHT, fill=Y)
 listbox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=listbox.yview)
 
-# Mở file và tải danh sách task
 openTaskfile()
 
-# Delete button
 Delete_icon = PhotoImage(file="image/delete.png")
 Button(window, image=Delete_icon, bd=0, command=deleteTask).pack(side=BOTTOM, pady=13)
 
