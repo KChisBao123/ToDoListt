@@ -1,108 +1,108 @@
-import tkinter
+import tkinter as tk
+import sqlite3
 from tkinter import *
-
-# Tạo cửa sổ chính
-window = Tk()
-window.title("TO_DO_LIST")
-window.geometry("400x650+400+100")
-window.resizable(False, False)
-
-task_list = []
+from tkinter import messagebox
 
 
-def addTask():
-    """Thêm task mới vào danh sách và file."""
-    task = task_entry.get()
-    task_entry.delete(0, END)
 
-    if task:
-        with open("tasklist.txt", 'a') as taskfile:
-            taskfile.write(f"{task}\n")
-        task_list.append(task)
-        listbox.insert(END, task)
+class DatabaseApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("SQLite Database Example")
 
+        # Create a database or connect to an existing one
+        self.conn = sqlite3.connect("testdb.db")
+        self.cursor = self.conn.cursor()
 
-def deleteTask():
-    global task_list
-    task = str(listbox.get(ANCHOR))
-    if task in task_list:
-        task_list.remove(task)
-        with open("tasklist.txt", "w") as taskfile:
-            for task in task_list:
-                taskfile.write(task + "\n")
-        listbox.delete(ANCHOR)
+        # Create a table if it doesn't exist
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, task TEXT)''')
+        self.conn.commit()
 
+        # Create GUI elements
+        self.top_image = tk.PhotoImage(file="image/topbar.png")
+        self.top_image_label = tk.Label(root, image=self.top_image,)
+        self.top_image_label.pack()
+        self.top_image_label.place(x=0,y=0)        
 
-def openTaskfile():
-    try:
-        global task_list
-        with open("tasklist.txt", "r") as taskfile:
-            tasks = taskfile.readlines()
+        self.task_image = tk.PhotoImage(file="image/task.png")
+        self.task_image_label = tk.Label(root, image=self.task_image, bg="#32405b")
+        self.task_image_label.pack()
+        self.task_image_label.place(x=30,y=25)
 
-        for task in tasks:
-            task = task.strip()
-            if task:
-                task_list.append(task)
-                listbox.insert(END, task)
-    except FileNotFoundError:
-        # Tạo file nếu chưa tồn tại
-        with open("tasklist.txt", "w") as taskfile:
-            pass
+        heading = Label(root, text="All Task", font="arial 20 bold", fg="white", bg="#32405b")
+        heading.place(x=130, y=20)
 
 
-# Icon
-Image_icon = PhotoImage(file="image/task.png")
-window.iconphoto(False, Image_icon)
+        frame = Frame(root, width=400, height=50, bg="white")
+        frame.place(x=0, y=70)
 
-# Top bar
-TopImage = PhotoImage(file="image/topbar.png")
-Label(window, image=TopImage).pack()
+        task = StringVar()
+        self.task_entry = Entry(frame, width=18, font="arial 20", bd=0, textvariable=task)
+        self.task_entry.place(x=10, y=7)
+        self.task_entry.focus()
 
-dockImage = PhotoImage(file="image/dock.png")
-Label(window, image=dockImage, bg="#32405b").place(x=30, y=25)
+        button = Button(frame, text="ADD", font="arial 20 bold", width=6, bg="#5a95ff", fg="#fff", bd=0, command=self.add_task)
+        button.place(x=300, y=0)
 
-noteImage = PhotoImage(file="image/task.png")
-Label(window, image=noteImage, bg="#32405b").place(x=30, y=25)
+        # Listbox
+        framel = Frame(root, bd=3, width=400, height=400, bg="#32405b")
+        framel.pack(pady=(160, 0))
 
-heading = Label(window, text="All Task", font="arial 20 bold", fg="white", bg="#32405b")
-heading.place(x=130, y=20)
+        self.listbox = Listbox(
+            framel,
+            font=('arial', 12),
+            width=40,
+            height=16,
+            bg="#32405b",
+            fg="white",
+            cursor="hand2",
+            selectbackground="#5a95ff"
+        )
+        self.listbox.pack(side=LEFT, fill=BOTH, padx=2)
 
+        scrollbar = Scrollbar(framel)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        self.listbox.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.listbox.yview)
 
-frame = Frame(window, width=400, height=50, bg="white")
-frame.place(x=0, y=70)
+        self.load_tasks()
 
-task = StringVar()
-task_entry = Entry(frame, width=18, font="arial 20", bd=0, textvariable=task)
-task_entry.place(x=10, y=7)
-task_entry.focus()
+        self.Delete_icon = PhotoImage(file="image/delete.png")
+        Button(root, image=self.Delete_icon, bd=0, command=self.delete_task).pack(side=BOTTOM, pady=13)
 
-button = Button(frame, text="ADD", font="arial 20 bold", width=6, bg="#5a95ff", fg="#fff", bd=0, command=addTask)
-button.place(x=300, y=0)
+    def add_task(self):
+        task = self.task_entry.get()
+        if task:
+            self.cursor.execute("INSERT INTO tasks (task) VALUES (?)", (task,))
+            self.conn.commit()
+            self.load_tasks()
+            self.task_entry.delete(0, tk.END)
+        else:
+            messagebox.showwarning("Warning", "Please input a task.")
 
-# Listbox
-framel = Frame(window, bd=3, width=400, height=400, bg="#32405b")
-framel.pack(pady=(160, 0))
+    def load_tasks(self):
+        self.listbox.delete(0, tk.END)
+        self.cursor.execute("SELECT * FROM tasks")
+        tasks = self.cursor.fetchall()
+        for row in tasks:
+            self.listbox.insert(tk.END, row[1])
 
-listbox = Listbox(
-    framel,
-    font=('arial', 12),
-    width=40,
-    height=16,
-    bg="#32405b",
-    fg="white",
-    cursor="hand2",
-    selectbackground="#5a95ff"
-)
-listbox.pack(side=LEFT, fill=BOTH, padx=2)
+    def delete_task(self):
+        selected_task = self.listbox.get(tk.ACTIVE)
+        if selected_task:
+            self.cursor.execute("DELETE FROM tasks WHERE task=?", (selected_task,))
+            self.conn.commit()
+            self.load_tasks()
+        else:
+            messagebox.showwarning("Warning", "Please select a task to delete.")
 
-scrollbar = Scrollbar(framel)
-scrollbar.pack(side=RIGHT, fill=Y)
-listbox.config(yscrollcommand=scrollbar.set)
-scrollbar.config(command=listbox.yview)
+    def __del__(self):
+        self.conn.close()
 
-openTaskfile()
-
-Delete_icon = PhotoImage(file="image/delete.png")
-Button(window, image=Delete_icon, bd=0, command=deleteTask).pack(side=BOTTOM, pady=13)
-
-window.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("TO_DO_LIST")
+    root.geometry("400x650+400+100")
+    root.resizable(False, False)
+    app = DatabaseApp(root)
+    root.mainloop()
